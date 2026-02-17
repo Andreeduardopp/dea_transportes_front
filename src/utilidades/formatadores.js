@@ -1,31 +1,55 @@
 /**
  * Formata o payload de uma rota extra para o formato esperado pela API.
  *
- * @param {Object} dadosFormulario - Dados do formulário lateral
- * @param {Array} paradas - Array de paradas do mapa
- * @returns {Object} Payload formatado para a API
+ * @param {Object} dadosFormulario - Dados do formulário (empresaParceira, data, hora, quantidadePassageiros)
+ * @param {Array<{endereco?: string, referencia?: string|null, latitude?: number, longitude?: number}>} paradas - Paradas do mapa
+ * @returns {import('../types/logistica').RotaExtraCreatePayload} Payload para POST /rotas-extras/
  */
 export function formatarPayloadRota(dadosFormulario, paradas) {
+    const primeiraParada = paradas[0];
+    const ultimaParada = paradas[paradas.length - 1];
+
     return {
-        empresa_parceira: parseInt(dadosFormulario.empresaParceira, 10),
-        data_hora: new Date(
+        origem_nome: (primeiraParada?.endereco || '').substring(0, 255),
+        destino_nome: (ultimaParada?.endereco || '').substring(0, 255),
+        empresa: parseInt(dadosFormulario.empresaParceira, 10),
+        data_hora_execucao: new Date(
             `${dadosFormulario.data}T${dadosFormulario.hora}`
         ).toISOString(),
         quantidade_passageiros: parseInt(dadosFormulario.quantidadePassageiros, 10),
-        paradas: paradas.map((parada, indice) => {
-            let tipo = 'parada';
-            if (indice === 0) tipo = 'origem';
-            if (indice === paradas.length - 1 && paradas.length > 1) tipo = 'destino';
-
-            return {
-                ordem: indice + 1,
-                tipo,
-                latitude: parada.latitude,
-                longitude: parada.longitude,
-                endereco: parada.endereco || '',
-            };
-        }),
+        status: 'pendente',
+        origem_whatsapp: false,
+        paradas: paradas.map((parada, indice) => ({
+            endereco: (parada.endereco || '').substring(0, 255),
+            referencia: parada.referencia || null,
+            localizacao:
+                parada.latitude != null && parada.longitude != null
+                    ? { latitude: parada.latitude, longitude: parada.longitude }
+                    : null,
+            ordem: indice + 1,
+        })),
     };
+}
+
+/**
+ * Formata data/hora ISO 8601 para exibição (ex: "01/03/2026 08:00").
+ * @param {string} isoString - Data/hora em ISO 8601
+ * @returns {string} Data formatada
+ */
+export function formatarDataHora(isoString) {
+    if (!isoString) return '—';
+    try {
+        const data = new Date(isoString);
+        return data.toLocaleString('pt-BR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+        });
+    } catch {
+        return '—';
+    }
 }
 
 /**

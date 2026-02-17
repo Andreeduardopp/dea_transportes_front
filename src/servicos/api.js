@@ -110,21 +110,35 @@ export const ServicoAutenticacao = {
 
 // ===== Serviço de Rotas Extras =====
 export const ServicoRotasExtras = {
-    async salvar(dadosRota) {
-        // Em produção, descomentar:
-        // const resposta = await api.post('/api/v1/rotas-extras/', dadosRota);
-        // return resposta.data;
+    /**
+     * Lista todas as rotas extras.
+     * @returns {Promise<Array>} Array de objetos RotaExtra
+     */
+    async listar() {
+        const resposta = await api.get('/api/v1/rotas-extras/');
+        return resposta.data;
+    },
 
-        // Simulação local
-        await new Promise((resolver) => setTimeout(resolver, 1500));
-        console.log('📦 Payload enviado para /api/v1/rotas-extras/:', JSON.stringify(dadosRota, null, 2));
+    /**
+     * Obtém uma rota extra pelo ID.
+     * @param {number} id - ID da rota extra
+     * @returns {Promise<Object>} Objeto RotaExtra
+     * @throws {Error} 404 quando a rota não existe
+     */
+    async obterPorId(id) {
+        const resposta = await api.get(`/api/v1/rotas-extras/${id}/`);
+        return resposta.data;
+    },
 
-        return {
-            id: Math.floor(Math.random() * 1000),
-            ...dadosRota,
-            status: 'pendente',
-            criado_em: new Date().toISOString(),
-        };
+    /**
+     * Cria uma nova rota extra.
+     * @param {import('../types/logistica').RotaExtraCreatePayload} payload - Payload de criação
+     * @returns {Promise<import('../types/logistica').RotaExtra>} RotaExtra criada
+     * @throws {Error} 400 com erro.response.data contendo erros de validação
+     */
+    async criar(payload) {
+        const resposta = await api.post('/api/v1/rotas-extras/', payload);
+        return resposta.data;
     },
 
     async listarEmpresasParceiras() {

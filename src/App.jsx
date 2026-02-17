@@ -4,6 +4,7 @@ import RotaProtegida from './componentes/RotaProtegida';
 import LayoutPrincipal from './componentes/layout/LayoutPrincipal';
 import PaginaLogin from './paginas/PaginaLogin';
 import PaginaRotasExtras from './paginas/PaginaRotasExtras';
+import PaginaListaRotasExtras from './paginas/PaginaListaRotasExtras';
 
 export default function App() {
   return (
@@ -22,6 +23,7 @@ export default function App() {
             }
           >
             <Route path="/rotas-extras" element={<PaginaRotasExtras />} />
+            <Route path="/rotas-extras/lista" element={<PaginaListaRotasExtras />} />
           </Route>
 
           {/* Redirect padrão */}

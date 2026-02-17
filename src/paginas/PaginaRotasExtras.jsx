@@ -17,6 +17,9 @@ import ListaParadas from '../componentes/mapa/ListaParadas';
 import { ServicoRotasExtras, ServicoGeocodificacao } from '../servicos/api';
 import { formatarPayloadRota, validarFormularioRota } from '../utilidades/formatadores';
 
+/** @typedef {import('../types/logistica').RotaExtraCreatePayload} RotaExtraCreatePayload */
+/** @typedef {import('../types/logistica').RotaExtra} RotaExtra */
+
 export default function PaginaRotasExtras() {
     // ===== Estado do formulário =====
     const [formulario, setFormulario] = useState({
@@ -128,9 +131,15 @@ export default function PaginaRotasExtras() {
         setMensagemSucesso('');
 
         try {
+            /** @type {RotaExtraCreatePayload} */
             const payload = formatarPayloadRota(formulario, paradas);
-            await ServicoRotasExtras.salvar(payload);
-            setMensagemSucesso('Rota extra cadastrada com sucesso!');
+            /** @type {RotaExtra} */
+            const rotaCriada = await ServicoRotasExtras.criar(payload);
+            setMensagemSucesso(
+                rotaCriada?.id
+                    ? `Rota extra #${rotaCriada.id} cadastrada com sucesso!`
+                    : 'Rota extra cadastrada com sucesso!'
+            );
 
             // Limpar formulário
             setFormulario({
@@ -140,7 +149,30 @@ export default function PaginaRotasExtras() {
                 quantidadePassageiros: '',
             });
             setParadas([]);
-        } catch {
+        } catch (erro) {
+            if (erro.response?.status === 400 && erro.response?.data) {
+                const dados = erro.response.data;
+                const errosMapeados = {};
+
+                if (Array.isArray(dados.empresa)) errosMapeados.empresaParceira = dados.empresa[0];
+                if (Array.isArray(dados.data_hora_execucao))
+                    errosMapeados.data = dados.data_hora_execucao[0];
+                if (Array.isArray(dados.quantidade_passageiros))
+                    errosMapeados.quantidadePassageiros = dados.quantidade_passageiros[0];
+                if (Array.isArray(dados.origem_nome) || Array.isArray(dados.destino_nome))
+                    errosMapeados.paradas =
+                        dados.origem_nome?.[0] || dados.destino_nome?.[0] || errosMapeados.paradas;
+                if (Array.isArray(dados.paradas)) {
+                    const msgParadas = dados.paradas
+                        .flatMap((p) => (typeof p === 'object' ? Object.values(p).flat() : [p]))
+                        .filter(Boolean)[0];
+                    if (msgParadas) errosMapeados.paradas = msgParadas;
+                }
+
+                if (Object.keys(errosMapeados).length > 0) {
+                    setErrosValidacao((ant) => ({ ...ant, ...errosMapeados }));
+                }
+            }
             setErroGeral('Não foi possível salvar a rota. Tente novamente.');
         } finally {
             setSalvando(false);

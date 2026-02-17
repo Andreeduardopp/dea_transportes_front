@@ -1,6 +1,6 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAutenticacao } from '../../contextos/ContextoAutenticacao';
-import { Truck, Route, LogOut, Menu, X } from 'lucide-react';
+import { Truck, Route, List, LogOut, Menu, X } from 'lucide-react';
 import { useState } from 'react';
 
 export default function LayoutPrincipal() {
@@ -46,7 +46,19 @@ export default function LayoutPrincipal() {
                                 }
                             >
                                 <Route size={16} />
-                                Rotas Extras
+                                Cadastrar
+                            </NavLink>
+                            <NavLink
+                                to="/rotas-extras/lista"
+                                className={({ isActive }) =>
+                                    `flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive
+                                        ? 'bg-azul-500/15 text-azul-400 shadow-sm'
+                                        : 'text-cinza-400 hover:text-cinza-200 hover:bg-azul-800/50'
+                                    }`
+                                }
+                            >
+                                <List size={16} />
+                                Listar Rotas
                             </NavLink>
                         </nav>
 
@@ -100,7 +112,20 @@ export default function LayoutPrincipal() {
                                 }
                             >
                                 <Route size={16} />
-                                Rotas Extras
+                                Cadastrar Rota
+                            </NavLink>
+                            <NavLink
+                                to="/rotas-extras/lista"
+                                onClick={() => setMenuAberto(false)}
+                                className={({ isActive }) =>
+                                    `flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all ${isActive
+                                        ? 'bg-azul-500/15 text-azul-400'
+                                        : 'text-cinza-400 hover:text-cinza-200 hover:bg-azul-800/50'
+                                    }`
+                                }
+                            >
+                                <List size={16} />
+                                Listar Rotas
                             </NavLink>
                             <button
                                 onClick={aoSair}
