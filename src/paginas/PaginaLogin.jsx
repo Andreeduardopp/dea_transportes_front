@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { useGoogleLogin } from '@react-oauth/google';
 import { useAutenticacao } from '../contextos/ContextoAutenticacao';
 import InputTexto from '../componentes/InputTexto';
 import Botao from '../componentes/Botao';
@@ -7,7 +8,13 @@ import { Mail, Lock, Truck, AlertCircle, LogIn } from 'lucide-react';
 
 export default function PaginaLogin() {
     const navegar = useNavigate();
-    const { login, carregando, erro, limparErro } = useAutenticacao();
+    const [searchParams] = useSearchParams();
+    const { login, loginWithGoogle, carregando, erro, limparErro, estaAutenticado } = useAutenticacao();
+    const mensagemUrl = searchParams.get('mensagem');
+
+    useEffect(() => {
+        if (estaAutenticado) navegar('/rotas-extras', { replace: true });
+    }, [estaAutenticado, navegar]);
 
     const [formulario, setFormulario] = useState({
         email: '',
@@ -45,12 +52,35 @@ export default function PaginaLogin() {
         if (!validarFormulario()) return;
 
         try {
-            await login(formulario);
+            await login({ email: formulario.email, password: formulario.senha });
             navegar('/rotas-extras', { replace: true });
         } catch {
             // Erro já tratado no contexto
         }
     };
+
+    const googleLogin = useGoogleLogin({
+        flow: 'implicit',
+        onSuccess: async (tokenResponse) => {
+            const accessToken = tokenResponse.access_token;
+            if (accessToken) {
+                try {
+                    await loginWithGoogle(accessToken);
+                    navegar('/rotas-extras', { replace: true });
+                } catch {
+                    // Erro já tratado no contexto
+                }
+            }
+        },
+        onError: () => {
+            limparErro();
+            setErrosValidacao({});
+        },
+    });
+
+    useEffect(() => {
+        if (mensagemUrl) limparErro();
+    }, [mensagemUrl, limparErro]);
 
     return (
         <div className="min-h-screen flex items-center justify-center px-4 py-8 bg-azul-950 relative overflow-hidden">
@@ -87,11 +117,11 @@ export default function PaginaLogin() {
                         </p>
                     </div>
 
-                    {/* Mensagem de erro da API */}
-                    {erro && (
+                    {/* Mensagem da URL (ex.: sessão expirada) ou da API */}
+                    {(mensagemUrl || erro) && (
                         <div className="mb-5 flex items-center gap-3 p-4 rounded-xl bg-erro/10 border border-erro/20 animar-fadeIn">
                             <AlertCircle size={18} className="text-erro shrink-0" />
-                            <p className="text-sm text-erro/90">{erro}</p>
+                            <p className="text-sm text-erro/90">{mensagemUrl || erro}</p>
                         </div>
                     )}
 
@@ -145,6 +175,28 @@ export default function PaginaLogin() {
                         >
                             Entrar
                         </Botao>
+
+                        {import.meta.env.VITE_GOOGLE_CLIENT_ID && (
+                            <div className="pt-2">
+                                <Botao
+                                    tipo="button"
+                                    variante="secundario"
+                                    larguraTotal
+                                    tamanho="lg"
+                                    aoClicar={() => googleLogin()}
+                                    desabilitado={carregando}
+                                >
+                                    Entrar com Google
+                                </Botao>
+                            </div>
+                        )}
+
+                        <p className="text-center text-sm text-cinza-400 pt-2">
+                            Não tem conta?{' '}
+                            <Link to="/cadastro" className="text-azul-400 hover:text-azul-300 font-medium">
+                                Cadastre-se
+                            </Link>
+                        </p>
                     </form>
 
                     {/* Credenciais de demonstração */}

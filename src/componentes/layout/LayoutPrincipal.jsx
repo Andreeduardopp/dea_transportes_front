@@ -8,8 +8,8 @@ export default function LayoutPrincipal() {
     const navegar = useNavigate();
     const [menuAberto, setMenuAberto] = useState(false);
 
-    const aoSair = () => {
-        logout();
+    const aoSair = async () => {
+        await logout();
         navegar('/login');
     };
 

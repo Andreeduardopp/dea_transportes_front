@@ -1,18 +1,24 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import { ProvedorAutenticacao } from './contextos/ContextoAutenticacao';
 import RotaProtegida from './componentes/RotaProtegida';
 import LayoutPrincipal from './componentes/layout/LayoutPrincipal';
 import PaginaLogin from './paginas/PaginaLogin';
+import PaginaCadastro from './paginas/PaginaCadastro';
 import PaginaRotasExtras from './paginas/PaginaRotasExtras';
 import PaginaListaRotasExtras from './paginas/PaginaListaRotasExtras';
 
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+
 export default function App() {
   return (
-    <ProvedorAutenticacao>
-      <BrowserRouter>
+    <GoogleOAuthProvider clientId={googleClientId}>
+      <ProvedorAutenticacao>
+        <BrowserRouter>
         <Routes>
-          {/* Rota pública */}
+          {/* Rotas públicas */}
           <Route path="/login" element={<PaginaLogin />} />
+          <Route path="/cadastro" element={<PaginaCadastro />} />
 
           {/* Rotas protegidas */}
           <Route
@@ -29,7 +35,8 @@ export default function App() {
           {/* Redirect padrão */}
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
-      </BrowserRouter>
-    </ProvedorAutenticacao>
+        </BrowserRouter>
+      </ProvedorAutenticacao>
+    </GoogleOAuthProvider>
   );
 }

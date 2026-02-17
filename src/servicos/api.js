@@ -37,17 +37,31 @@ api.interceptors.response.use(
                         refresh: tokenRefresh,
                     });
 
-                    const novoToken = resposta.data.access;
-                    localStorage.setItem('token_acesso', novoToken);
-                    requisicaoOriginal.headers.Authorization = `Bearer ${novoToken}`;
-
-                    return api(requisicaoOriginal);
+                    const novoToken = resposta.data.access ?? resposta.data.access_token;
+                    if (novoToken) {
+                        localStorage.setItem('token_acesso', novoToken);
+                        requisicaoOriginal.headers.Authorization = `Bearer ${novoToken}`;
+                        return api(requisicaoOriginal);
+                    }
                 }
-            } catch (erroRefresh) {
                 localStorage.removeItem('token_acesso');
                 localStorage.removeItem('token_refresh');
-                window.location.href = '/login';
-                return Promise.reject(erroRefresh);
+                localStorage.removeItem('usuario');
+                const params = new URLSearchParams({
+                    mensagem: 'Sessão expirada. Faça login novamente.',
+                });
+                window.location.href = `/login?${params.toString()}`;
+                return Promise.reject(erro);
+            } catch {
+                // Refresh falhou: limpar tokens e redirecionar com mensagem
+                localStorage.removeItem('token_acesso');
+                localStorage.removeItem('token_refresh');
+                localStorage.removeItem('usuario');
+                const params = new URLSearchParams({
+                    mensagem: 'Sessão expirada. Faça login novamente.',
+                });
+                window.location.href = `/login?${params.toString()}`;
+                return Promise.reject(erro);
             }
         }
 
@@ -55,47 +69,99 @@ api.interceptors.response.use(
     }
 );
 
+// Extrai mensagem de erro da resposta da API (non_field_errors, campos, etc.)
+export function extrairMensagemErro(data) {
+    if (!data || typeof data !== 'object') return null;
+    const naoCampo = data.non_field_errors;
+    if (Array.isArray(naoCampo) && naoCampo.length) return naoCampo[0];
+    if (typeof naoCampo === 'string') return naoCampo;
+    const campos = ['email', 'password', 'password1', 'password2', 'access_token'];
+    for (const c of campos) {
+        const val = data[c];
+        if (Array.isArray(val) && val.length) return val[0];
+        if (typeof val === 'string') return val;
+    }
+    return data.detail ?? null;
+}
+
+// Normaliza resposta de login/signup/google: access_token ou access, refresh_token ou refresh, user
+function normalizarRespostaAuth(resposta) {
+    const data = resposta.data ?? resposta;
+    const access = data.access_token ?? data.access;
+    const refresh = data.refresh_token ?? data.refresh;
+    const user = data.user ?? data.usuario;
+    return { access, refresh, user };
+}
+
+function armazenarTokens(access, refresh, user) {
+    if (access) localStorage.setItem('token_acesso', access);
+    if (refresh) localStorage.setItem('token_refresh', refresh);
+    if (user) localStorage.setItem('usuario', JSON.stringify(user));
+}
+
 // ===== Serviços de Autenticação =====
 export const ServicoAutenticacao = {
     async login(credenciais) {
-        // Simulação de autenticação com backend Django JWT
-        // Em produção, descomentar a chamada real:
-        // const resposta = await api.post('/api/v1/auth/token/', credenciais);
-
-        // Simulação local
-        await new Promise((resolver) => setTimeout(resolver, 1200));
-
-        if (
-            credenciais.email === 'admin@transporte.com' &&
-            credenciais.senha === 'admin123'
-        ) {
-            const dadosSimulados = {
-                access: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.simulado_token_acesso',
-                refresh: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.simulado_token_refresh',
-                usuario: {
-                    id: 1,
-                    nome: 'Administrador',
-                    email: 'admin@transporte.com',
-                    cargo: 'Gestor de Frotas',
-                },
-            };
-
-            localStorage.setItem('token_acesso', dadosSimulados.access);
-            localStorage.setItem('token_refresh', dadosSimulados.refresh);
-            localStorage.setItem('usuario', JSON.stringify(dadosSimulados.usuario));
-
-            return dadosSimulados;
-        }
-
-        const erro = new Error('Credenciais inválidas');
-        erro.response = { status: 401, data: { detail: 'E-mail ou senha incorretos.' } };
-        throw erro;
+        const resposta = await api.post('/api/v1/auth/login/', {
+            email: credenciais.email,
+            password: credenciais.password,
+        });
+        const { access, refresh, user } = normalizarRespostaAuth(resposta);
+        armazenarTokens(access, refresh, user);
+        return { access, refresh, user };
     },
 
-    logout() {
+    async signUp(email, password1, password2) {
+        const resposta = await api.post('/api/v1/auth/registration/', {
+            email,
+            password1,
+            password2,
+        });
+        const { access, refresh, user } = normalizarRespostaAuth(resposta);
+        armazenarTokens(access, refresh, user);
+        return { access, refresh, user };
+    },
+
+    async loginWithGoogle(accessToken) {
+        const resposta = await api.post('/api/v1/auth/google/', {
+            access_token: accessToken,
+        });
+        const { access, refresh, user } = normalizarRespostaAuth(resposta);
+        armazenarTokens(access, refresh, user);
+        return { access, refresh, user };
+    },
+
+    async refreshTokens() {
+        const refresh = localStorage.getItem('token_refresh');
+        if (!refresh) throw new Error('Sem refresh token');
+        const resposta = await axios.post(`${URL_BASE_API}/api/v1/auth/token/refresh/`, {
+            refresh,
+        });
+        const novoAccess = resposta.data.access ?? resposta.data.access_token;
+        if (novoAccess) {
+            localStorage.setItem('token_acesso', novoAccess);
+            return { access: novoAccess };
+        }
+        throw new Error('Resposta de refresh inválida');
+    },
+
+    async logout() {
+        const refresh = localStorage.getItem('token_refresh');
+        try {
+            await api.post('/api/v1/auth/logout/', refresh ? { refresh } : {});
+        } catch {
+            // Ignora erro do logout (ex.: rede); limpa tokens mesmo assim
+        }
         localStorage.removeItem('token_acesso');
         localStorage.removeItem('token_refresh');
         localStorage.removeItem('usuario');
+    },
+
+    async getCurrentUser() {
+        const resposta = await api.get('/api/v1/auth/user/');
+        const user = resposta.data;
+        if (user) localStorage.setItem('usuario', JSON.stringify(user));
+        return user;
     },
 
     obterUsuarioAtual() {
