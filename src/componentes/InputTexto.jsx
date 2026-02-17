@@ -57,6 +57,7 @@ export default function InputTexto({
                         }
             ${desabilitado ? 'opacity-50 cursor-not-allowed' : ''}
           `}
+                    style={{ color: '#F1F5F9' }}
                     {...props}
                 />
 
@@ -64,8 +65,8 @@ export default function InputTexto({
                     <button
                         type="button"
                         onClick={() => setMostrarSenha(!mostrarSenha)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-cinza-400 hover:text-cinza-200 transition-colors"
-                        tabIndex={-1}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-cinza-400 hover:text-cinza-200 transition-colors p-1 cursor-pointer z-10"
+                        tabIndex={0}
                         aria-label={mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'}
                     >
                         {mostrarSenha ? <EyeOff size={18} /> : <Eye size={18} />}

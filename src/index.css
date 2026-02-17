@@ -1,7 +1,14 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
+/* Estilo básico para o mapa não sumir */
+#map {
+  height: 400px;
+  width: 100%;
+}
 /* ===== Tema — Sistema de Fretamento ===== */
-@theme {
+:root {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
 
   /* Azul Escuro */

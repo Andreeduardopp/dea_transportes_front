@@ -1,7 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Polyline, Marker, Popup, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { encurtarEndereco, obterRotuloParada } from '../../utilidades/formatadores';
+import { ServicoRotas } from '../../servicos/rotas';
 
 // ===== Ícone de marcador numerado =====
 function criarIconeMarcador(numero, totalParadas) {
@@ -50,8 +51,34 @@ export default function MapaInterativo({
 }) {
     const referenciaPolyline = useRef(null);
     const posicaoInicial = [-23.5505, -46.6333]; // São Paulo
+    const [rotasCoordenadas, setRotasCoordenadas] = useState([]);
+    const [carregandoRota, setCarregandoRota] = useState(false);
 
-    const pontosPolyline = paradas.map((p) => [p.latitude, p.longitude]);
+    // Busca a rota real quando as paradas mudam
+    useEffect(() => {
+        const buscarRota = async () => {
+            if (paradas.length < 2) {
+                setRotasCoordenadas([]);
+                return;
+            }
+
+            setCarregandoRota(true);
+            try {
+                // Obtém rotas segmentadas para cada par de pontos consecutivos
+                const rotasSegmentadas = await ServicoRotas.obterRotasSegmentadas(paradas);
+                setRotasCoordenadas(rotasSegmentadas);
+            } catch (erro) {
+                console.error('Erro ao buscar rota:', erro);
+                // Fallback: usa linha reta em caso de erro
+                const pontosRetos = paradas.map((p) => [p.latitude, p.longitude]);
+                setRotasCoordenadas([pontosRetos]);
+            } finally {
+                setCarregandoRota(false);
+            }
+        };
+
+        buscarRota();
+    }, [paradas]);
 
     return (
         <div className="w-full h-full relative">
@@ -96,20 +123,39 @@ export default function MapaInterativo({
                     </Marker>
                 ))}
 
-                {/* Polyline conectando os pontos */}
-                {pontosPolyline.length >= 2 && (
-                    <Polyline
-                        ref={referenciaPolyline}
-                        positions={pontosPolyline}
-                        pathOptions={{
-                            color: '#3B82F6',
-                            weight: 4,
-                            opacity: 0.8,
-                            dashArray: '10, 6',
-                            lineCap: 'round',
-                        }}
-                    />
-                )}
+                {/* Polylines mostrando as rotas reais seguindo estradas */}
+                {rotasCoordenadas.map((rota, indice) => {
+                    // Define cores baseadas na posição do segmento
+                    let corRota = '#3B82F6'; // Azul padrão
+                    if (rotasCoordenadas.length === 1) {
+                        // Rota única: azul
+                        corRota = '#3B82F6';
+                    } else if (indice === 0) {
+                        // Primeiro segmento (origem): verde
+                        corRota = '#22C55E';
+                    } else if (indice === rotasCoordenadas.length - 1) {
+                        // Último segmento (destino): vermelho
+                        corRota = '#EF4444';
+                    } else {
+                        // Segmentos intermediários: azul
+                        corRota = '#3B82F6';
+                    }
+
+                    return (
+                        <Polyline
+                            key={`rota-${indice}`}
+                            positions={rota}
+                            pathOptions={{
+                                color: corRota,
+                                weight: 4,
+                                opacity: 0.8,
+                                dashArray: '10, 6',
+                                lineCap: 'round',
+                                lineJoin: 'round',
+                            }}
+                        />
+                    );
+                })}
             </MapContainer>
 
             {/* Instrução sobreposta */}
@@ -128,6 +174,18 @@ export default function MapaInterativo({
                     <div className="bg-azul-800/90 backdrop-blur-sm border border-azul-700/40 rounded-xl px-5 py-3 shadow-2xl">
                         <p className="text-cinza-300 text-sm font-medium text-center">
                             📍 Agora clique para definir o <span className="text-erro font-bold">destino</span> ou paradas intermediárias
+                        </p>
+                    </div>
+                </div>
+            )}
+
+            {/* Indicador de carregamento da rota */}
+            {carregandoRota && paradas.length >= 2 && (
+                <div className="absolute top-4 right-4 z-[1000] pointer-events-none">
+                    <div className="bg-azul-800/90 backdrop-blur-sm border border-azul-700/40 rounded-lg px-4 py-2 shadow-2xl flex items-center gap-2">
+                        <div className="w-4 h-4 border-2 border-azul-500 border-t-transparent rounded-full animate-spin" />
+                        <p className="text-cinza-300 text-xs font-medium">
+                            Calculando rota...
                         </p>
                     </div>
                 </div>
