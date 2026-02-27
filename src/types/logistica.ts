@@ -125,3 +125,68 @@ export interface RotaFixaCreatePayload {
 
 /** Payload for PUT/PATCH /rotas-fixas/{id}/ — all fields optional for PATCH */
 export type RotaFixaUpdatePayload = Partial<RotaFixaCreatePayload>;
+
+// =============================================================================
+// Paginated response (DRF default)
+// =============================================================================
+
+export interface PaginatedResponse<T> {
+    count: number;
+    next: string | null;
+    previous: string | null;
+    results: T[];
+}
+
+// =============================================================================
+// Motorista
+// =============================================================================
+
+/** Motorista as returned by the API (read) */
+export interface Motorista {
+    id: number;
+    nome: string;
+    cpf: string;
+    cnh: string;
+    celular: string;
+    ativo: boolean;
+    criado_em: string; // ISO 8601 datetime
+    atualizado_em: string; // ISO 8601 datetime
+}
+
+/** Payload for POST /motoristas/ (create) */
+export interface MotoristaCreatePayload {
+    nome: string;
+    cpf: string;
+    cnh: string;
+    celular: string;
+    ativo?: boolean; // default true
+}
+
+/** Payload for PUT/PATCH /motoristas/{id}/ — all fields optional for PATCH */
+export type MotoristaUpdatePayload = Partial<MotoristaCreatePayload>;
+
+// =============================================================================
+// EmpresaParceira
+// =============================================================================
+
+/** EmpresaParceira as returned by the API (read) */
+export interface EmpresaParceira {
+    id: number;
+    nome: string;
+    cnpj: string;
+    contato: string;
+    email: string;
+    criado_em: string; // ISO 8601 datetime
+    atualizado_em: string; // ISO 8601 datetime
+}
+
+/** Payload for POST /empresas-parceiras/ (create) */
+export interface EmpresaParceiraCreatePayload {
+    nome: string;
+    cnpj: string;
+    contato: string;
+    email: string;
+}
+
+/** Payload for PUT/PATCH /empresas-parceiras/{id}/ — all fields optional for PATCH */
+export type EmpresaParceiraUpdatePayload = Partial<EmpresaParceiraCreatePayload>;

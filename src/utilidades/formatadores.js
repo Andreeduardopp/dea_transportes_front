@@ -108,3 +108,68 @@ export function validarFormularioRota(dados, paradas) {
         erros,
     };
 }
+
+/**
+ * Formata o payload de uma rota fixa para o formato esperado pela API.
+ *
+ * @param {Object} dadosFormulario - Dados do formulário (empresa, motorista, horarioPartida, diasDaSemana)
+ * @param {Array<{endereco?: string, referencia?: string|null, latitude?: number, longitude?: number}>} paradas - Paradas do mapa
+ * @returns {import('../types/logistica').RotaFixaCreatePayload} Payload para POST /rotas-fixas/
+ */
+export function formatarPayloadRotaFixa(dadosFormulario, paradas) {
+    const primeiraParada = paradas[0];
+    const ultimaParada = paradas[paradas.length - 1];
+
+    const empresa = parseInt(dadosFormulario.empresa, 10);
+    const motorista =
+        dadosFormulario.motorista && String(dadosFormulario.motorista).trim() !== ''
+            ? parseInt(dadosFormulario.motorista, 10)
+            : null;
+
+    return {
+        origem_nome: (primeiraParada?.endereco || '').substring(0, 255),
+        destino_nome: (ultimaParada?.endereco || '').substring(0, 255),
+        empresa,
+        veiculo: null,
+        motorista,
+        horario_partida: dadosFormulario.horarioPartida,
+        dias_da_semana: dadosFormulario.diasDaSemana,
+        paradas: paradas.map((parada, indice) => ({
+            endereco: (parada.endereco || '').substring(0, 255),
+            referencia: parada.referencia || null,
+            localizacao:
+                parada.latitude != null && parada.longitude != null
+                    ? { latitude: parada.latitude, longitude: parada.longitude }
+                    : null,
+            ordem: indice + 1,
+        })),
+    };
+}
+
+/**
+ * Valida os dados do formulário de rota fixa antes de submeter.
+ */
+export function validarFormularioRotaFixa(dados, paradas) {
+    const erros = {};
+
+    if (!dados.empresa) {
+        erros.empresa = 'Selecione uma empresa parceira.';
+    }
+
+    if (!dados.horarioPartida) {
+        erros.horarioPartida = 'Informe o horário de partida.';
+    }
+
+    if (!dados.diasDaSemana) {
+        erros.diasDaSemana = 'Selecione os dias da semana.';
+    }
+
+    if (paradas.length < 2) {
+        erros.paradas = 'Defina ao menos o ponto de origem e o destino no mapa.';
+    }
+
+    return {
+        valido: Object.keys(erros).length === 0,
+        erros,
+    };
+}

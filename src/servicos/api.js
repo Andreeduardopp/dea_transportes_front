@@ -75,9 +75,16 @@ export function extrairMensagemErro(data) {
     const naoCampo = data.non_field_errors;
     if (Array.isArray(naoCampo) && naoCampo.length) return naoCampo[0];
     if (typeof naoCampo === 'string') return naoCampo;
-    const campos = ['email', 'password', 'password1', 'password2', 'access_token'];
-    for (const c of campos) {
+    const camposConhecidos = ['email', 'password', 'password1', 'password2', 'access_token'];
+    for (const c of camposConhecidos) {
         const val = data[c];
+        if (Array.isArray(val) && val.length) return val[0];
+        if (typeof val === 'string') return val;
+    }
+    // Qualquer outro campo de validação (ex.: cpf, cnh, cnpj)
+    for (const key of Object.keys(data)) {
+        if (key === 'detail' || key === 'non_field_errors') continue;
+        const val = data[key];
         if (Array.isArray(val) && val.length) return val[0];
         if (typeof val === 'string') return val;
     }
@@ -174,6 +181,132 @@ export const ServicoAutenticacao = {
     },
 };
 
+// ===== Serviço de Motoristas =====
+export const ServicoMotoristas = {
+    /**
+     * Lista motoristas (resposta paginada DRF).
+     * @param {{ page?: number }} params - Parâmetros de paginação
+     * @returns {Promise<{ count: number, next: string|null, previous: string|null, results: Array }>}
+     */
+    async listar(params = {}) {
+        const resposta = await api.get('/api/v1/motoristas/', { params });
+        return resposta.data;
+    },
+
+    /**
+     * Obtém um motorista pelo ID.
+     * @param {number} id - ID do motorista
+     * @returns {Promise<Object>} Motorista
+     */
+    async obterPorId(id) {
+        const resposta = await api.get(`/api/v1/motoristas/${id}/`);
+        return resposta.data;
+    },
+
+    /**
+     * Cria um novo motorista.
+     * @param {Object} payload - { nome, cpf, cnh, celular, ativo? }
+     * @returns {Promise<Object>} Motorista criado
+     */
+    async criar(payload) {
+        const resposta = await api.post('/api/v1/motoristas/', payload);
+        return resposta.data;
+    },
+
+    /**
+     * Atualiza um motorista (PUT — envio completo).
+     * @param {number} id - ID do motorista
+     * @param {Object} payload - Campos a enviar
+     * @returns {Promise<Object>} Motorista atualizado
+     */
+    async atualizar(id, payload) {
+        const resposta = await api.put(`/api/v1/motoristas/${id}/`, payload);
+        return resposta.data;
+    },
+
+    /**
+     * Atualização parcial (PATCH).
+     * @param {number} id - ID do motorista
+     * @param {Object} payload - Apenas campos a alterar
+     * @returns {Promise<Object>} Motorista atualizado
+     */
+    async atualizarParcial(id, payload) {
+        const resposta = await api.patch(`/api/v1/motoristas/${id}/`, payload);
+        return resposta.data;
+    },
+
+    /**
+     * Remove um motorista.
+     * @param {number} id - ID do motorista
+     */
+    async excluir(id) {
+        await api.delete(`/api/v1/motoristas/${id}/`);
+    },
+};
+
+// ===== Serviço de Empresas Parceiras =====
+export const ServicoEmpresasParceiras = {
+    /**
+     * Lista empresas parceiras (resposta paginada DRF).
+     * @param {{ page?: number }} params - Parâmetros de paginação
+     * @returns {Promise<{ count: number, next: string|null, previous: string|null, results: Array }>}
+     */
+    async listar(params = {}) {
+        const resposta = await api.get('/api/v1/empresas-parceiras/', { params });
+        return resposta.data;
+    },
+
+    /**
+     * Obtém uma empresa parceira pelo ID.
+     * @param {number} id - ID da empresa
+     * @returns {Promise<Object>} EmpresaParceira
+     */
+    async obterPorId(id) {
+        const resposta = await api.get(`/api/v1/empresas-parceiras/${id}/`);
+        return resposta.data;
+    },
+
+    /**
+     * Cria uma nova empresa parceira.
+     * @param {Object} payload - { nome, cnpj, contato, email }
+     * @returns {Promise<Object>} EmpresaParceira criada
+     */
+    async criar(payload) {
+        const resposta = await api.post('/api/v1/empresas-parceiras/', payload);
+        return resposta.data;
+    },
+
+    /**
+     * Atualiza uma empresa parceira (PUT — envio completo).
+     * @param {number} id - ID da empresa
+     * @param {Object} payload - Campos a enviar
+     * @returns {Promise<Object>} EmpresaParceira atualizada
+     */
+    async atualizar(id, payload) {
+        const resposta = await api.put(`/api/v1/empresas-parceiras/${id}/`, payload);
+        return resposta.data;
+    },
+
+    /**
+     * Atualização parcial (PATCH).
+     * @param {number} id - ID da empresa
+     * @param {Object} payload - Apenas campos a alterar
+     * @returns {Promise<Object>} EmpresaParceira atualizada
+     */
+    async atualizarParcial(id, payload) {
+        const resposta = await api.patch(`/api/v1/empresas-parceiras/${id}/`, payload);
+        return resposta.data;
+    },
+
+    /**
+     * Remove uma empresa parceira.
+     * @param {number} id - ID da empresa
+     */
+    async excluir(id) {
+        await api.delete(`/api/v1/empresas-parceiras/${id}/`);
+    },
+};
+
 // ===== Serviço de Rotas Extras =====
 export const ServicoRotasExtras = {
     /**
@@ -207,19 +340,66 @@ export const ServicoRotasExtras = {
         return resposta.data;
     },
 
+    /**
+     * Lista empresas parceiras (retorna array para compatibilidade com dropdowns).
+     * Delega a ServicoEmpresasParceiras.listar() e retorna results.
+     * @returns {Promise<Array>} Array de EmpresaParceira (primeira página)
+     */
     async listarEmpresasParceiras() {
-        // Em produção, descomentar:
-        // const resposta = await api.get('/api/v1/empresas-parceiras/');
-        // return resposta.data;
+        const resposta = await ServicoEmpresasParceiras.listar();
+        return resposta ?? [];
+    },
+};
 
-        // Dados simulados
-        return [
-            { id: 1, nome: 'TransLog Ltda.' },
-            { id: 2, nome: 'Viação Rápida S.A.' },
-            { id: 3, nome: 'Express Fretamentos' },
-            { id: 4, nome: 'MoveTransp Ltda.' },
-            { id: 5, nome: 'Fretacar Transportes' },
-        ];
+// ===== Serviço de Rotas Fixas =====
+export const ServicoRotasFixas = {
+    /**
+     * Lista todas as rotas fixas.
+     * @returns {Promise<Array>} Array de objetos RotaFixa
+     */
+    async listar() {
+        const resposta = await api.get('/api/v1/rotas-fixas/');
+        return resposta.data;
+    },
+
+    /**
+     * Obtém uma rota fixa pelo ID.
+     * @param {number} id - ID da rota fixa
+     * @returns {Promise<Object>} Objeto RotaFixa
+     * @throws {Error} 404 quando a rota não existe
+     */
+    async obterPorId(id) {
+        const resposta = await api.get(`/api/v1/rotas-fixas/${id}/`);
+        return resposta.data;
+    },
+
+    /**
+     * Cria uma nova rota fixa.
+     * @param {import('../types/logistica').RotaFixaCreatePayload} payload - Payload de criação
+     * @returns {Promise<import('../types/logistica').RotaFixa>} RotaFixa criada
+     * @throws {Error} 400 com erro.response.data contendo erros de validação
+     */
+    async criar(payload) {
+        const resposta = await api.post('/api/v1/rotas-fixas/', payload);
+        return resposta.data;
+    },
+
+    /**
+     * Lista empresas parceiras (retorna array para compatibilidade com dropdowns).
+     * @returns {Promise<Array>} Array de EmpresaParceira (primeira página)
+     */
+    async listarEmpresasParceiras() {
+        const resposta = await ServicoEmpresasParceiras.listar();
+        return resposta?.results ?? resposta ?? [];
+    },
+
+    /**
+     * Lista motoristas (retorna array para compatibilidade com dropdowns).
+     * @returns {Promise<Array>} Array de Motorista (primeira página)
+     */
+    async listarMotoristas() {
+        const resposta = await ServicoMotoristas.listar();
+        return resposta?.results ?? resposta ?? [];
     },
 };
 

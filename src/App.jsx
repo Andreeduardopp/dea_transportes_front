@@ -7,6 +7,7 @@ import PaginaLogin from './paginas/PaginaLogin';
 import PaginaCadastro from './paginas/PaginaCadastro';
 import PaginaRotasExtras from './paginas/PaginaRotasExtras';
 import PaginaListaRotasExtras from './paginas/PaginaListaRotasExtras';
+import PaginaRotasFixas from './paginas/PaginaRotasFixas';
 
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
@@ -30,6 +31,7 @@ export default function App() {
           >
             <Route path="/rotas-extras" element={<PaginaRotasExtras />} />
             <Route path="/rotas-extras/lista" element={<PaginaListaRotasExtras />} />
+            <Route path="/rotas-fixas" element={<PaginaRotasFixas />} />
           </Route>
 
           {/* Redirect padrão */}
